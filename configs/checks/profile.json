@@ -1,0 +1,12 @@
+{
+  "name": "check-profile",
+  "output": "runs/check-profile",
+  "runs": [
+    "configs/checks/profile-B.json",
+    "configs/checks/profile-D.json"
+  ],
+  "device": "cuda:0",
+  "precision": "bf16",
+  "eval_dir": "data/synthetic/stage-s-v2",
+  "retries": 1
+}

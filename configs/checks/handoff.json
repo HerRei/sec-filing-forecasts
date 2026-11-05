@@ -1,0 +1,11 @@
+{
+  "name": "check-handoff",
+  "output": "runs/check-handoff",
+  "runs": [
+    "configs/checks/handoff-D.json"
+  ],
+  "device": "cuda:0",
+  "precision": "bf16",
+  "eval_dir": "data/synthetic/stage-s-v2",
+  "retries": 1
+}

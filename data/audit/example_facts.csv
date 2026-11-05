@@ -1,0 +1,4 @@
+record_id,entity,metric,value,unit,period_start,period_end,public_at,executable_at,version,source,replaces,received_at
+example-v1,FICTIONAL-ISSUER,inventory,100,USD,2026-01-01,2026-03-31,2026-04-10T20:00:00Z,2026-04-13T13:30:00Z,1,example://fictional-release,,
+example-v2,FICTIONAL-ISSUER,inventory,95,USD,2026-01-01,2026-03-31,2026-05-01T20:00:00Z,2026-05-04T13:30:00Z,2,example://fictional-correction,example-v1,
+

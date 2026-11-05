@@ -1,0 +1,28 @@
+{
+  "name": "stage-s",
+  "output": "runs/stage-s",
+  "runs": [
+    "configs/stage-s/A-s1.json",
+    "configs/stage-s/B-s1.json",
+    "configs/stage-s/C-s1.json",
+    "configs/stage-s/D-s1.json",
+    "configs/stage-s/A-s2.json",
+    "configs/stage-s/B-s2.json",
+    "configs/stage-s/C-s2.json",
+    "configs/stage-s/D-s2.json",
+    "configs/stage-s/A-s3.json",
+    "configs/stage-s/B-s3.json",
+    "configs/stage-s/C-s3.json",
+    "configs/stage-s/D-s3.json"
+  ],
+  "report": true,
+  "requires": [
+    "docs/PREREGISTRATION.md",
+    "runs/stage-s/baselines/gbdt-regular/predictions-final.npz",
+    "runs/stage-s/baselines/gbdt-varied/predictions-final.npz"
+  ],
+  "device": "cuda:0",
+  "precision": "bf16",
+  "eval_dir": "data/synthetic/stage-s-v2",
+  "retries": 1
+}

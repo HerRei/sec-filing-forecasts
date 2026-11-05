@@ -1,0 +1,24 @@
+{
+  "name": "D-k32-s2",
+  "family": "varied",
+  "memory": "revision",
+  "seed": 2,
+  "width": 256,
+  "layers": 6,
+  "heads": 8,
+  "batch_size": 64,
+  "steps": 6884,
+  "lr": 0.0005,
+  "warmup_steps": 300,
+  "weight_decay": 0.01,
+  "fact_tokens": 128,
+  "market_tokens": 96,
+  "milestones": [
+    689,
+    2065,
+    6884
+  ],
+  "monitor_every": 500,
+  "workers": 8,
+  "fact_budget": 32
+}

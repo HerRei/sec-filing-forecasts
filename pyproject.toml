@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sec-filing-forecasts"
+version = "0.1.0"
+description = "Return-distribution forecasts after SEC filings, pre-registered and tested on real data"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "numpy==2.2.6",
+    "torch>=2.9,<2.15",
+    "scikit-learn>=1.5",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "matplotlib>=3.9",
+    "exchange_calendars>=4.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2", "ruff==0.14.1"]
+
+[project.scripts]
+disclosure-research = "disclosure_forecasting.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["local_training: tiny optimizer and checkpoint runs (a few seconds on a CPU)"]
+
+[tool.ruff]
+line-length = 100
+

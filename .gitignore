@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.env
+data/*
+!data/audit/
+runs/
+*.pt
+*.npz
+findings/*
+!findings/findings.tex
+!findings/findings.pdf
+!findings/figures/
