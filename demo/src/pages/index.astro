@@ -1,0 +1,335 @@
+---
+import d from '../data/rklb.json';
+
+// The forecast chart: 25 sessions before the decision to 20 after, in % against XLI.
+const W = 1000, H = 560, L = 72, R = 770, top = 34, bot = 498, S0 = -25, S1 = 20, lo = -40, hi = 55;
+const X = (s: number) => L + ((s - S0) / (S1 - S0)) * (R - L);
+const Y = (v: number) => top + ((hi - v) / (hi - lo)) * (bot - top);
+const f = (n: number) => n.toFixed(1);
+
+// Quantiles exist at 1, 5 and 20 sessions; in between they are interpolated on a square-root
+// time axis, the way a range that grows with the square root of time would.
+const anchors = [0, 1, Math.sqrt(5), Math.sqrt(20)];
+const at = (src: Record<string, number[]>, k: number, s: number) => {
+  const a = [0, src['1'][k], src['5'][k], src['20'][k]], z = Math.sqrt(s);
+  for (let i = 1; i < 4; i++) if (z <= anchors[i]) return a[i - 1] + ((a[i] - a[i - 1]) * (z - anchors[i - 1])) / (anchors[i] - anchors[i - 1]);
+  return a[3];
+};
+const steps = Array.from({ length: 81 }, (_, i) => i / 4);
+const band = (src: Record<string, number[]>, a: number, z: number) =>
+  'M' + steps.map((s) => `${f(X(s))},${f(Y(at(src, z, s)))}`).join('L') +
+  'L' + [...steps].reverse().map((s) => `${f(X(s))},${f(Y(at(src, a, s)))}`).join('L') + 'Z';
+const edge = (src: Record<string, number[]>, k: number) => 'M' + steps.map((s) => `${f(X(s))},${f(Y(at(src, k, s)))}`).join('L');
+const pre = d.pre.map((v, i) => `${f(X(i - d.pre.length))},${f(Y(v))}`).join(' ') + ` ${f(X(0))},${f(Y(0))}`;
+const post = d.path.map((v, i) => `${f(X(i))},${f(Y(v))}`).join(' ');
+const n20 = d.net['20'], v20 = d.vol['20'], last = d.path[20];
+const pct = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + ' %';
+
+// The evening of the filing, 15:00 on 8 May to 10:30 on 9 May, New York time.
+const TW = 1000, T0 = 40, T1 = 960, hours = 19.5;
+const TX = (h: number) => T0 + (h / hours) * (T1 - T0);
+const hm = (t: string) => { const [, time] = t.split(' '); const [hh, mm, ss = '0'] = time.split(':').map(Number); return hh + mm / 60 + ss / 3600; };
+const since15 = (t: string) => (t.startsWith('2025-05-09') ? 24 : 0) + hm(t) - 15;
+const tRelease = since15(d.release_et), tAccepted = since15(d.accepted_et), tBulk = since15(d.bulk_et), tDecide = since15(d.decision_et);
+const ax = 132;
+const base = import.meta.env.BASE_URL;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>One filing, one forecast · sec-filing-forecasts</title>
+    <meta name="description" content="Rocket Lab's 10-Q of 8 May 2025: what a model forecast after it, and what happened." />
+    <link rel="icon" href={`${base}/favicon.svg`.replace('//', '/')} type="image/svg+xml" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="kicker">sec-filing-forecasts</p>
+        <h1>Rocket Lab, 8&nbsp;May&nbsp;2025</h1>
+        <p class="lead">
+          One filing from a pre-registered test of 3,329 SEC filings: when it became public, what a
+          small Transformer forecast after it, and what the stock did next.
+        </p>
+      </header>
+
+      <section>
+        <h2>The filing</h2>
+        <p>
+          Rocket Lab filed its first-quarter earnings release with the SEC at 16:17 New York time and
+          its 10-Q thirteen minutes later, at 16:30:52. The model may only act at the first market
+          open at least 30 minutes after a filing is accepted: 09:30 the next morning.
+        </p>
+        <figure class="timeline" data-timeline>
+          <svg viewBox={`0 0 ${TW} 230`} role="img" aria-label="Timeline: earnings release filed 16:17, 10-Q accepted 16:30, the SEC bulk file says 20:30, the model decides at 09:30 the next day.">
+            <rect x={TX(1)} y="20" width={TX(18.5) - TX(1)} height={ax - 20} fill="#0f1420" />
+            <text x={TX(1) + 8} y="38" class="t-muted">market closed</text>
+            <line x1={T0} y1={ax} x2={T1} y2={ax} stroke="#3a4458" stroke-width="1.5" />
+            {Array.from({ length: 20 }, (_, i) => (
+              <line x1={TX(i)} y1={ax} x2={TX(i)} y2={ax + ((i + 15) % 24 === 0 ? 14 : 7)} stroke="#3a4458" />
+            ))}
+            {[1, 5, 9, 13, 17].map((i) => (
+              <text x={TX(i)} y={ax + 30} text-anchor="middle" class="t-mono">{String((i + 15) % 24).padStart(2, '0')}:00</text>
+            ))}
+            <text x={TX(0)} y={ax + 58} class="t-muted">Thu 8 May</text>
+            <text x={TX(9)} y={ax + 58} class="t-muted">Fri 9 May</text>
+            <g class="mark" style="--i:0">
+              <line x1={TX(tRelease)} y1="62" x2={TX(tRelease)} y2={ax} stroke="#99a0ad" stroke-width="1.5" />
+              <circle cx={TX(tRelease)} cy={ax} r="5" fill="#99a0ad" />
+              <text x={TX(tRelease) + 8} y="66" class="t-muted">earnings release filed, 16:17</text>
+            </g>
+            <g class="mark" style="--i:1">
+              <line x1={TX(tAccepted)} y1="96" x2={TX(tAccepted)} y2={ax} stroke="#eceef2" stroke-width="2" />
+              <circle cx={TX(tAccepted)} cy={ax} r="6" fill="#eceef2" />
+              <text x={TX(tAccepted) + 8} y="100" class="t-ink">10-Q accepted, 16:30</text>
+            </g>
+            <g class="mark" style="--i:2">
+              <path d={`M${TX(tAccepted)},${ax + 76} H${TX(tBulk)}`} stroke="#c8453f" stroke-width="1.5" stroke-dasharray="4 5" fill="none" />
+              <circle cx={TX(tBulk)} cy={ax + 76} r="5" fill="none" stroke="#c8453f" stroke-width="1.5" />
+              <text x={TX(tBulk) + 10} y={ax + 81} class="t-red">SEC bulk file: 20:30, four hours late</text>
+            </g>
+            <g class="mark" style="--i:3">
+              <line x1={TX(tDecide)} y1="62" x2={TX(tDecide)} y2={ax} stroke="#ffdf7a" stroke-width="2.5" />
+              <circle cx={TX(tDecide)} cy={ax} r="7" fill="#ffdf7a" />
+              <text x={TX(tDecide) - 10} y="66" text-anchor="end" class="t-star">model decides, 09:30</text>
+            </g>
+          </svg>
+        </figure>
+        <p class="aside">
+          The SEC's own bulk download lists this 10-Q at 20:30:52, four hours late. For about half of
+          the filings in the study it is off in the same way, and for two thirds it is wrong in some
+          way, so every time here comes from the SEC's XBRL archive instead.
+        </p>
+      </section>
+
+      <section>
+        <h2>The forecast</h2>
+        <p>
+          For the next 20 trading days the network's 10–90 % range ran from {pct(n20[1])} to {pct(n20[5])}
+          against the industrial sector fund. A forecast that only knows the last 20 days of volatility
+          said {pct(d.vol['20'][1])} to {pct(d.vol['20'][5])}. The network's middle was {pct(n20[3])}: no view on
+          the direction, just a much wider range.
+        </p>
+        <figure class="chart" data-chart data-path={JSON.stringify(post.split(' ').map((p) => p.split(',').map(Number)))} data-values={JSON.stringify(d.path)}>
+          <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Rocket Lab against the sector fund: the network's range for 20 trading days, the narrower volatility range, and the real path, ending at ${pct(last)}.`}>
+            <defs>
+              <clipPath id="fanclip"><rect x={X(0)} y="0" width={R - X(0) + 4} height={H} /></clipPath>
+            </defs>
+            {[-40, -20, 0, 20, 40].map((v) => (
+              <g>
+                <line x1={L} y1={Y(v)} x2={R} y2={Y(v)} stroke={v === 0 ? '#3a4458' : '#161c28'} stroke-width={v === 0 ? 1.4 : 1} />
+                <text x={L - 10} y={Y(v) + 5} text-anchor="end" class="t-mono">{v > 0 ? '+' : v < 0 ? '−' : ''}{Math.abs(v)} %</text>
+              </g>
+            ))}
+            <line x1={X(0)} y1={top - 8} x2={X(0)} y2={bot + 6} stroke="#3a4458" stroke-width="1.4" />
+            <g clip-path="url(#fanclip)">
+              <path d={band(d.net, 0, 6)} fill="#efe9dc" fill-opacity="0.10" />
+              <path d={band(d.net, 1, 5)} fill="#efe9dc" fill-opacity="0.15" />
+              <path d={band(d.net, 2, 4)} fill="#efe9dc" fill-opacity="0.24" />
+              <path d={edge(d.vol, 0)} fill="none" stroke="#87afd7" stroke-width="1.8" stroke-dasharray="6 7" />
+              <path d={edge(d.vol, 6)} fill="none" stroke="#87afd7" stroke-width="1.8" stroke-dasharray="6 7" />
+            </g>
+            <g class="fanlabels">
+              <text x={R + 14} y={Y(n20[5]) + 6} class="t-ink">network, 10–90 %</text>
+              <text x={R + 14} y={Y(v20[0]) + 6} class="t-steel">volatility, 5–95 %</text>
+            </g>
+            <polyline points={pre} fill="none" stroke="#eceef2" stroke-opacity="0.45" stroke-width="2.4" stroke-linejoin="round" />
+            <polyline class="actual" points={post} fill="none" stroke="#ffdf7a" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" />
+            <circle cx={X(0)} cy={Y(0)} r="6" fill="#ffdf7a" />
+            <circle class="head" cx={X(20)} cy={Y(last)} r="7" fill="#ffdf7a" />
+            <text class="end t-star" x={R + 14} y={Y(last) + 5}>what happened, {pct(last)}</text>
+            <text class="readout t-mono-ink" x={L + 8} y={top + 14}>day 20 · {pct(last)}</text>
+            <text x={X(-25)} y={bot + 36} class="t-muted">25 days before</text>
+            <text x={X(0) - 10} y={bot + 36} text-anchor="end" class="t-ink">open, 9 May</text>
+            <text x={X(5)} y={bot + 36} text-anchor="middle" class="t-mono">+5</text>
+            <text x={X(20)} y={bot + 36} text-anchor="middle" class="t-mono">+20 days</text>
+          </svg>
+          <p class="legend" aria-hidden="true">
+            <span><i class="k-net"></i>network, 10–90 %</span>
+            <span><i class="k-vol"></i>volatility, 5–95 %</span>
+            <span><i class="k-real"></i>what happened, {pct(last)}</span>
+          </p>
+          <button type="button" class="replay" hidden>play again</button>
+        </figure>
+      </section>
+
+      <section>
+        <h2>What happened</h2>
+        <p>
+          On the first day the stock fell {pct(d.path[1])} against the sector. After a week it was up {pct(d.path[5])}, after
+          twelve days {pct(d.path[12])}, and after 20 trading days {pct(last)}. That is inside the network's 10–90 % range,
+          and outside even the volatility forecast's 5–95 % range of {pct(v20[0])} to {pct(v20[6])}.
+        </p>
+      </section>
+
+      <section>
+        <h2>In context</h2>
+        <p>
+          I picked this filing because it shows the pattern clearly. It is not a typical case, and plenty
+          of forecasts miss. Over all 3,329 filings from 2023 to 2026, the network's loss was 3.4 % lower
+          than the volatility forecast's, and it got the direction right only about half the time. What
+          it learned is how wide the range should be, not which way the stock goes.
+        </p>
+      </section>
+
+      <footer>
+        <p>
+          <a href="https://github.com/HerRei/sec-filing-forecasts">Code and findings</a>
+          <span aria-hidden="true">·</span>
+          <a href="https://hermesreisner.com/work/finance-forecasting/">Write-up</a>
+        </p>
+        <p class="aside">Filings from SEC EDGAR, prices from Yahoo. Nothing here is a trading signal.</p>
+      </footer>
+    </main>
+
+    <script>
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // The evening of the filing: the marks come in one after the other once the timeline is seen.
+      const timeline = document.querySelector('[data-timeline]');
+      if (timeline && !still) {
+        timeline.classList.add('waiting');
+        new IntersectionObserver((entries, seen) => {
+          if (!entries[0].isIntersecting) return;
+          timeline.classList.replace('waiting', 'shown');
+          seen.disconnect();
+        }, { threshold: 0.6 }).observe(timeline);
+      }
+
+      // The forecast opens from the decision, then the real path walks through it day by day.
+      const chart = document.querySelector<HTMLElement>('[data-chart]');
+      if (chart && !still) {
+        const points: number[][] = JSON.parse(chart.dataset.path!);
+        const values: number[] = JSON.parse(chart.dataset.values!);
+        const clip = chart.querySelector('#fanclip rect')!;
+        const line = chart.querySelector('.actual')!;
+        const head = chart.querySelector('.head')!;
+        const end = chart.querySelector<SVGTextElement>('.end')!;
+        const labels = chart.querySelector<SVGGElement>('.fanlabels')!;
+        const readout = chart.querySelector('.readout')!;
+        const replay = chart.querySelector<HTMLButtonElement>('.replay')!;
+        const fullWidth = Number(clip.getAttribute('width'));
+        const pct = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + ' %';
+        const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+        let frame = 0;
+
+        const show = (open: number, day: number) => {
+          clip.setAttribute('width', String(fullWidth * open));
+          labels.style.opacity = open >= 1 ? '1' : '0';
+          const i = Math.min(19, Math.floor(day)), k = day - i;
+          const x = points[i][0] + (points[i + 1][0] - points[i][0]) * k;
+          const y = points[i][1] + (points[i + 1][1] - points[i][1]) * k;
+          const v = values[i] + (values[i + 1] - values[i]) * k;
+          line.setAttribute('points', [...points.slice(0, i + 1), [x, y]].map((p) => p.join(',')).join(' '));
+          head.setAttribute('cx', String(x));
+          head.setAttribute('cy', String(y));
+          head.setAttribute('opacity', day > 0 ? '1' : '0');
+          readout.textContent = day > 0 ? `day ${Math.round(day)} · ${pct(v)}` : 'the decision, 9 May 09:30';
+          end.style.opacity = day >= 20 ? '1' : '0';
+        };
+
+        const play = () => {
+          cancelAnimationFrame(frame);
+          replay.hidden = true;
+          const t0 = performance.now(), opening = 1400, pause = 500, walking = 7000;
+          const tick = (now: number) => {
+            const t = now - t0;
+            const open = ease(Math.min(1, t / opening));
+            const day = 20 * Math.min(1, Math.max(0, (t - opening - pause) / walking));
+            show(open, day);
+            if (day < 20) frame = requestAnimationFrame(tick);
+            else replay.hidden = false;
+          };
+          frame = requestAnimationFrame(tick);
+        };
+
+        show(0, 0);
+        replay.addEventListener('click', play);
+        new IntersectionObserver((entries, seen) => {
+          if (!entries[0].isIntersecting) return;
+          play();
+          seen.disconnect();
+        }, { threshold: 0.55 }).observe(chart);
+      }
+    </script>
+
+    <style is:global>
+      :root {
+        color-scheme: dark;
+        --night: #080b12;
+        --ink: #eceef2;
+        --muted: #99a0ad;
+        --line: #262c38;
+        --star: #ffdf7a;
+        --steel: #87afd7;
+        --red: #c8453f;
+        --sans: 'Helvetica Neue', Arial, sans-serif;
+        --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--night);
+        color: var(--ink);
+        font: 17px/1.6 var(--sans);
+      }
+      main { max-width: 44rem; margin: 0 auto; padding: 4rem 1.25rem 3rem; }
+      .kicker { margin: 0 0 1.5rem; font: 0.85rem var(--mono); color: var(--muted); }
+      h1 { margin: 0; font-size: clamp(2.2rem, 7vw, 3.4rem); font-weight: 500; line-height: 1.05; letter-spacing: -0.02em; }
+      .lead { margin: 1.25rem 0 0; font-size: 1.15rem; color: #c9ced8; }
+      section { margin-top: 4.5rem; }
+      h2 { margin: 0 0 0.75rem; font-size: 1.35rem; font-weight: 500; }
+      p { margin: 0 0 1rem; }
+      .aside { color: var(--muted); font-size: 0.95rem; }
+      figure { margin: 2rem 0 1.5rem; }
+      figure.chart { margin-inline: calc(50% - min(32rem, 50vw - 0.5rem)); }
+      svg { display: block; width: 100%; height: auto; overflow: visible; }
+      svg text { font-family: var(--sans); font-size: 19px; }
+      .t-mono, .t-mono-ink { font-family: var(--mono); font-size: 16px; fill: var(--muted); }
+      .fanlabels { transition: opacity 0.6s; }
+      @media (max-width: 40rem) {
+        figure .legend { display: flex; }
+        .fanlabels, .end { display: none; }
+        svg text { font-size: 26px; }
+        .t-mono, .t-mono-ink { font-size: 22px; }
+      }
+      .t-mono-ink { fill: var(--ink); }
+      .t-muted { fill: var(--muted); }
+      .t-ink { fill: var(--ink); }
+      .t-star { fill: var(--star); }
+      .t-steel { fill: var(--steel); }
+      .t-red { fill: var(--red); }
+      .end { transition: opacity 0.6s; }
+      .replay {
+        display: block;
+        margin: 0.75rem auto 0;
+        padding: 0.3rem 0.9rem;
+        background: none;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font: 0.85rem var(--mono);
+        cursor: pointer;
+      }
+      .replay[hidden] { display: none; }
+      .legend { display: none; margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--muted); gap: 0.4rem 1.1rem; flex-wrap: wrap; justify-content: center; }
+      .legend i { display: inline-block; width: 1.1rem; height: 0.55rem; margin-right: 0.4rem; vertical-align: middle; }
+      .k-net { background: rgba(239, 233, 220, 0.4); }
+      .k-vol { border-top: 2px dashed var(--steel); height: 0 !important; }
+      .k-real { background: var(--star); height: 3px !important; }
+      .replay:hover, .replay:focus-visible { border-color: var(--star); color: var(--ink); }
+      .replay:focus-visible, a:focus-visible { outline: 2px solid var(--star); outline-offset: 3px; }
+      .waiting .mark { opacity: 0; transform: translateY(6px); }
+      .shown .mark {
+        opacity: 1;
+        transform: none;
+        transition: opacity 0.7s, transform 0.7s;
+        transition-delay: calc(var(--i) * 0.9s);
+      }
+      a { color: var(--ink); text-underline-offset: 0.2em; }
+      a:hover { color: var(--star); }
+      footer { margin-top: 5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+      footer span { margin: 0 0.5rem; color: var(--muted); }
+    </style>
+  </body>
+</html>

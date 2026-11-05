@@ -9,7 +9,8 @@ the next 5 and 20 trading days. It learns on simulated companies first, then on 
 filings of 305 US industrial companies. I wrote the rules of the final test down and hashed them
 before any outcome existed.
 
-Findings: [`findings/findings.pdf`](findings/findings.pdf) (4 pages). The story behind it:
+Findings: [`findings/findings.pdf`](findings/findings.pdf) (4 pages). One forecast, animated:
+[herrei.github.io/sec-filing-forecasts](https://herrei.github.io/sec-filing-forecasts/). The story behind it:
 [hermesreisner.com/work/finance-forecasting](https://hermesreisner.com/work/finance-forecasting/)
 
 ## What came out
@@ -77,6 +78,7 @@ configs/                           the simulation runs
 scripts/                           config writers, downloads, the final-test runner
 docs/                              the test plans as written, with the final one's hash
 findings/                          the findings as LaTeX and PDF
+demo/                              the one-page demo (Astro)
 data/audit/                        the 120 records I checked against the original filings
 tests/
 ```
