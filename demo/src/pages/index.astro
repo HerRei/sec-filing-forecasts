@@ -3,6 +3,11 @@ import d from '../data/rklb.json';
 
 // The forecast chart: 25 sessions before the decision to 20 after, in % against XLI.
 const W = 1000, H = 560, L = 72, R = 770, top = 34, bot = 498, S0 = -25, S1 = 20, lo = -40, hi = 55;
+// The plot (L to R) is the middle of the picture: the view starts as far left of L as the labels reach right
+// of R, so the chart sits centred under the text. On phones the side labels are hidden and the view is cut to
+// the plot and its axis labels, centred the same way (see figure.chart in the styles).
+const VX = L + R - W, VW = W - VX;
+const PX = -20, PW = L + R - 2 * PX;
 const X = (s: number) => L + ((s - S0) / (S1 - S0)) * (R - L);
 const Y = (v: number) => top + ((hi - v) / (hi - lo)) * (bot - top);
 const f = (n: number) => n.toFixed(1);
@@ -111,8 +116,8 @@ const base = import.meta.env.BASE_URL;
           said {pct(d.vol['20'][1])} to {pct(d.vol['20'][5])}. The network's middle was {pct(n20[3])}: no view on
           the direction, just a much wider range.
         </p>
-        <figure class="chart" data-chart data-path={JSON.stringify(post.split(' ').map((p) => p.split(',').map(Number)))} data-values={JSON.stringify(d.path)}>
-          <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Rocket Lab against the sector fund: the network's range for 20 trading days, the narrower volatility range, and the real path, ending at ${pct(last)}.`}>
+        <figure class="chart" style={`--vw: ${VW}; --pw: ${PW}; --px: ${PX - VX}`} data-chart data-path={JSON.stringify(post.split(' ').map((p) => p.split(',').map(Number)))} data-values={JSON.stringify(d.path)}>
+          <svg viewBox={`${VX} 0 ${VW} ${H}`} role="img" aria-label={`Rocket Lab against the sector fund: the network's range for 20 trading days, the narrower volatility range, and the real path, ending at ${pct(last)}.`}>
             <defs>
               <clipPath id="fanclip"><rect x={X(0)} y="0" width={R - X(0) + 4} height={H} /></clipPath>
             </defs>
@@ -283,7 +288,7 @@ const base = import.meta.env.BASE_URL;
       p { margin: 0 0 1rem; }
       .aside { color: var(--muted); font-size: 0.95rem; }
       figure { margin: 2rem 0 1.5rem; }
-      figure.chart { margin-inline: calc(50% - min(32rem, 50vw - 0.5rem)); }
+      figure.chart { margin-inline: calc(50% - min(32rem * var(--vw) / 1000, 50vw - 0.5rem)); }
       svg { display: block; width: 100%; height: auto; overflow: visible; }
       svg text { font-family: var(--sans); font-size: 19px; }
       .t-mono, .t-mono-ink { font-family: var(--mono); font-size: 16px; fill: var(--muted); }
@@ -291,6 +296,8 @@ const base = import.meta.env.BASE_URL;
       @media (max-width: 40rem) {
         figure .legend { display: flex; }
         .fanlabels, .end { display: none; }
+        figure.chart { overflow: hidden; }
+        figure.chart svg { width: calc(100% * var(--vw) / var(--pw)); margin-left: calc(-100% * var(--px) / var(--pw)); }
         svg text { font-size: 26px; }
         .t-mono, .t-mono-ink { font-size: 22px; }
       }
